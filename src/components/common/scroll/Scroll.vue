@@ -63,15 +63,25 @@
     },
     methods: {
       scrollTo(x = 0, y = 0, time = 300) {
-        this.scroll.scrollTo(x, y, time)
+        this.scroll && this.scroll.scrollTo && this.scroll.scrollTo(x, y, time)
       },
       finishPullUp() {
-        this.scroll.finishPullUp()
+        this.scroll && this.scroll.finishPullUp && this.scroll.finishPullUp()
+      },
+      refresh() {
+        this.scroll && this.scroll.refresh && this.scroll.refresh()
+      },
+      getScrollY() {
+        return this.scroll.y
       }
     }
   }
 </script>
 
 <style scoped>
-
+  .wrapper {
+    width: 100%;
+    height: 500vh;
+    overflow: hidden;
+  }
 </style>

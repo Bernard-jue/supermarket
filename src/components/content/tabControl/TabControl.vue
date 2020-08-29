@@ -17,31 +17,19 @@
       titles: {
         type: Array,
         default() {
-          return []
+          return ['流行', '新款', '精选']
         }
       }
     },
     data() {
       return {
-        currentType: POP,
         currentIndex: 0
       }
     },
     methods: {
       tabClick(index) {
         this.currentIndex = index;
-        switch(index) {
-          case 0:
-            this.currentType = POP
-            break
-          case 1:
-            this.currentType = NEW
-            break
-          case 2:
-            this.currentType = SELL
-            break
-        }
-        this.$emit('changeType', this.currentType);
+        this.$emit('changeType', index);
       }
     }
   }
@@ -63,5 +51,6 @@
   .active span {
     padding: 5px;
     border-bottom: var(--color-high-text) 2px solid;
+    color: var(--color-high-text)
   }
 </style>

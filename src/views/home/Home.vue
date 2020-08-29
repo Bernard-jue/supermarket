@@ -1,7 +1,13 @@
 <template>
   <div id="home">
-    <nav-bar class="nav-home"><div slot="center">购物街</div></nav-bar>
-
+    <nav-bar class="nav-home">
+      <div slot="center">购物街</div>
+    </nav-bar>
+    <tab-control :titles="['流行', '新款', '精选']"
+                 @changeType="changeType"
+                 class="home-tab-control"
+                 v-show="isTabFixed"
+                 ref="topTab"/>
     <scroll class="content"
             ref="scroll"
             :probe-type="3"
@@ -9,16 +15,17 @@
             :pull-up-load="true"
             @scroll="contentScroll"
             @pullingUp="LoadMore">
-      <home-swiper ref="hSwiper" :banners="banners" @swiperLoaded="swiperLoaded"></home-swiper>
+      <home-swiper
+        ref="hSwiper"
+        :banners="banners"
+        @swiperLoaded="swiperLoaded"></home-swiper>
       <recommend-view :recommends="recommends"/>
       <FeatureView/>
-      <tab-control :titles="['流行', '新款', '精选']"
-                   class="control-tab"
-                   @changeType="changeType"/>
+      <tab-control ref="contentTab" class="tab-control" @changeType="changeType"></tab-control>
       <goods-list :goods="showGoods"/>
     </scroll>
 
-    <back-top @click.native="backClick" v-show="showBackTop"/>
+    <back-top @click.native="backTop" v-show="showBackTop"/>
   </div>
 </template>
 
@@ -31,10 +38,11 @@
   import Scroll from 'components/common/scroll/Scroll'
   import TabControl from 'components/content/tabControl/TabControl'
   import GoodsList from 'components/content/goods/GoodsList'
-  import BackTop from 'components/content/backTop/BackTop'
 
   import {getHomeMultidata, getHomeGoods} from 'network/home'
+
   import {POP, SELL, NEW} from 'common/const'
+  import {itemListenerMixin, backTopMixin} from 'common/mixin'
 
   export default {
     name: "Home",
@@ -45,9 +53,9 @@
       FeatureView,
       TabControl,
       GoodsList,
-      Scroll,
-      BackTop
+      Scroll
     },
+    mixins: [itemListenerMixin, backTopMixin],
     data() {
       return {
         banners: [],
@@ -60,14 +68,21 @@
         currentType: POP,
         showTabControl: false,
         tabOffsetTop: 0,
-        showBackTop: false,
-        saveY: 0
+        saveY: 0,
+        isTabFixed: false,
       }
     },
     computed: {
       showGoods() {
         return this.goods[this.currentType].list
       }
+    },
+    activated() {
+      this.$refs.scroll.scrollTo(0, this.saveY, 300);
+      this.$refs.scroll.refresh()
+    },
+    deactivated() {
+      this.saveY = this.$refs.scroll.getScrollY()
     },
     created() {
       // 1.请求轮播等数据
@@ -78,10 +93,12 @@
       this._getHomeGoods(SELL);
       this._getHomeGoods(NEW);
 
-      // 3.监听一些事件
-      // this.$bus.$on('imgLoad', () => {
-      //   this.$refs.scroll.refresh();
-      // });
+      this.changeType(0);
+    },
+    mounted() {
+    },
+    destroyed() {
+      this.$bus.$off('imgLoad', this.itemImageListener)
     },
     methods: {
       /**
@@ -99,34 +116,43 @@
         getHomeGoods(type, page).then(res => {
           this.goods[type].list.push(...res.data.list);
           this.goods[type].page = page;
-
-          // 为了可以监听下一次上拉事件，要先结束这次的
-          this.$refs.scroll.scroll.finishPullUp();
         })
       },
 
       /**
        * 事件监听
        * **/
-      swiperLoaded() {},
-      backClick() {
-        this.$refs.scroll.scrollTo();
+      swiperLoaded() {
+        this.tabOffsetTop = this.$refs.contentTab.$el.offsetTop
       },
-      changeType(type) {
-        this.currentType = type;
+      changeType(index) {
+        switch (index) {
+          case 0:
+            this.currentType = POP
+            break
+          case 1:
+            this.currentType = NEW
+            break
+          case 2:
+            this.currentType = SELL
+            break
+        }
+
+        if (this.$refs.contentTab !== undefined && this.$refs.topTab !== undefined) {
+          this.$refs.contentTab.currentIndex = index
+          this.$refs.topTab.currentIndex = index
+        }
       },
       contentScroll(position) {
-        this.showBackTop = -(position.y) > 1000
+        // 1. 判断backTop是否显示
+        this.showBackTop = -(position.y) >= 1000;
+
+        // 2.决定TabControl是否吸顶（position: fixed）
+        this.isTabFixed = (-position.y) >= this.tabOffsetTop;
       },
       LoadMore() {
         this._getHomeGoods(this.currentType);
-
-        // 如果不写这个会有个bug，就是不可往下继续滚动了
-        // scroll在挂载的时候，会有一个初始图片高度
-        // 后续请求更多数据后，高度变化，可以滚动的高度却没有刷新
-        // 所以会有一个卡住无法再往下拉的情况
-        // 所以要在图片加载完之后，要重新计算一下现在要加载的内容的高度
-        this.$refs.scroll.scroll.refresh()
+        this.$refs.scroll.finishPullUp();
       }
     }
   }
@@ -134,7 +160,7 @@
 
 <style scoped>
   #home {
-    padding-top: 44px;
+    /*padding-top: 44px;*/
     height: 100vh;
     position: relative;
   }
@@ -143,18 +169,12 @@
     background-color: var(--color-tint);
     color: #ffffff;
 
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 9;
-  }
-
-  .control-tab {
-    position: sticky;
-    top: 44px;
-    background-color: #fff;
-    z-index: 9;
+    /*使用浏览器原生滚动的时候，为了保证导航栏不滚动，现在用了BScroll就不需要了*/
+    /*position: fixed;*/
+    /*top: 0;*/
+    /*left: 0;*/
+    /*right: 0;*/
+    /*z-index: 9;*/
   }
 
   .content {
@@ -164,5 +184,18 @@
     bottom: 49px;
     left: 0;
     right: 0;
+  }
+
+  .fixed {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 44px;
+  }
+
+  .home-tab-control {
+    position: relative;
+    z-index: 9;
+    background-color: #fff;
   }
 </style>

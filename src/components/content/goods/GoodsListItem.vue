@@ -1,13 +1,11 @@
 <template>
-  <div class="goodsListItem">
-    <a :href="goodsItem.link">
-      <img :src="goodsItem.show.img" alt="">
-      <div class="information">
-        <p>{{goodsItem.title}}</p>
-        <span class="price">{{goodsItem.price}}</span>
-        <span class="favourite">{{goodsItem.cfav}}</span>
-      </div>
-    </a>
+  <div class="goodsListItem" @click="ItemClick">
+    <img v-lazy="showImage" alt="" @load="imageLoad">
+    <div class="information">
+      <p>{{goodsItem.title}}</p>
+      <span class="price">{{goodsItem.price}}</span>
+      <span class="favourite">{{goodsItem.cfav}}</span>
+    </div>
   </div>
 </template>
 
@@ -20,6 +18,20 @@
         default() {
           return {}
         }
+      }
+    },
+    computed: {
+      showImage() {
+        return this.goodsItem.img || this.goodsItem.image || this.goodsItem.show.img
+      }
+    },
+    methods: {
+      imageLoad() {
+        this.$bus.$emit('imgLoad')
+      },
+      ItemClick() {
+        const iid = this.goodsItem.iid;
+        this.$router.push({path: '/detail', query: {iid: iid}})
       }
     }
   }
