@@ -16,7 +16,9 @@ Vue.prototype.$bus = new Vue();
 Vue.use(toast);
 
 // 解决移动端的300ms延迟
-FastClick.attach(document.body);
+// 有个bug未解决
+// TODO
+// FastClick.attach(document.body);
 
 // 使用懒加载的插件
 Vue.use(VueLazyLoad, {

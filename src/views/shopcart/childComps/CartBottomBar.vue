@@ -57,8 +57,9 @@
           // 如果没有选中任何一件商品
           this.$toast.show('您还没有选择商品哦~')
         } else {
+          this.$bus.$emit('buy', this.cartList.filter(item => item.checked));
           // 跳转到支付页面
-          this.$router.push({path: '/payment', query: {price: this.totalPrice}})
+          this.$router.push({path: '/payment', query: {price: this.totalPrice}});
         }
       }
     }
